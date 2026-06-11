@@ -1,4 +1,5 @@
 import json
+import unittest
 from pathlib import Path
 
 
@@ -15,23 +16,25 @@ def _source(cell):
     return "".join(source) if isinstance(source, list) else source
 
 
-def test_notebook_initializes_openai_after_imports_and_dotenv():
-    non_empty_sources = [_source(cell) for cell in _code_cells() if _source(cell).strip()]
-    setup_source = non_empty_sources[0]
+class NotebookSetupTest(unittest.TestCase):
+    def test_notebook_initializes_openai_after_imports_and_dotenv(self):
+        non_empty_sources = [_source(cell) for cell in _code_cells() if _source(cell).strip()]
+        setup_source = non_empty_sources[0]
 
-    assert setup_source.index("from dotenv import load_dotenv") < setup_source.index("load_dotenv()")
-    assert setup_source.index("from openai import OpenAI") < setup_source.index("OpenAI()")
-    assert setup_source.index("load_dotenv()") < setup_source.index("OpenAI()")
+        self.assertLess(
+            setup_source.index("from dotenv import load_dotenv"),
+            setup_source.index("load_dotenv()"),
+        )
+        self.assertLess(setup_source.index("from openai import OpenAI"), setup_source.index("OpenAI()"))
+        self.assertLess(setup_source.index("load_dotenv()"), setup_source.index("OpenAI()"))
 
+    def test_notebook_does_not_commit_execution_outputs(self):
+        for cell in _code_cells():
+            self.assertIsNone(cell.get("execution_count"))
+            self.assertEqual(cell.get("outputs"), [])
 
-def test_notebook_does_not_commit_execution_outputs():
-    for cell in _code_cells():
-        assert cell.get("execution_count") is None
-        assert cell.get("outputs") == []
+    def test_notebook_does_not_display_secret_values(self):
+        sources = [_source(cell) for cell in _code_cells()]
 
-
-def test_notebook_does_not_display_secret_values():
-    sources = [_source(cell) for cell in _code_cells()]
-
-    assert 'os.getenv("MY_SECRET_KEY") is not None' in sources
-    assert "os.getenv('MY_SECRET_KEY')" not in sources
+        self.assertIn('os.getenv("MY_SECRET_KEY") is not None', sources)
+        self.assertNotIn("os.getenv('MY_SECRET_KEY')", sources)
