@@ -16,7 +16,7 @@ class NotebookInitializationTests(unittest.TestCase):
 
         openai_import_index = source.find("from openai import OpenAI")
         dotenv_import_index = source.find("from dotenv import load_dotenv")
-        dotenv_load_index = source.find("load_dotenv()")
+        dotenv_load_index = source.find('load_dotenv(".env")')
         client_init_index = source.find("openai_client = OpenAI()")
 
         self.assertNotEqual(openai_import_index, -1)
